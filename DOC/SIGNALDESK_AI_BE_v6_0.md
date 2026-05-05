@@ -706,7 +706,7 @@ Write (PostgreSQL commit)
 
 ```
 signaldesk-be/              ← NX monorepo
-├── services/
+├── apps/                    ← Nx deployable applications
 │   ├── gateway-bff/        ← NestJS
 │   │   └── src/
 │   │       ├── middleware/
@@ -795,16 +795,17 @@ signaldesk-be/              ← NX monorepo
 │
 ├── libs/
 │   ├── contracts/events/           ← Event schemas (JSON Schema / TypeScript)
-│   ├── dotnet/BuildingBlocks/
-│   │   ├── Common/                 ← Result<T>, base Entity, ITenantContext
-│   │   ├── Messaging/              ← RabbitMQ producer abstractions
-│   │   ├── Persistence/            ← Outbox base, soft delete, audit
-│   │   └── Observability/          ← OTel setup, structured logging
-│   └── node/common/
-│       ├── config/
-│       ├── logger/                 ← Winston + OTel
-│       ├── messaging/              ← RabbitMQ client helpers
-│       └── tracing/
+│   ├── building-blocks/dotnet/
+│   │   ├── BuildingBlocks.Domain/          ← base Entity, domain events, exceptions
+│   │   ├── BuildingBlocks.Application/     ← ITenantContext, current user, correlation context
+│   │   ├── BuildingBlocks.Messaging/       ← event/outbox abstractions
+│   │   └── BuildingBlocks.Infrastructure/  ← persistence, audit, observability implementations
+│   └── building-blocks/nestjs/
+│       ├── src/config/ or service config modules
+│       ├── src/logging/             ← structured logger helpers
+│       ├── src/rabbitmq/            ← RabbitMQ client helpers
+│       ├── src/correlation/         ← correlation context helpers
+│       └── src/tracing/             ← tracing/OpenTelemetry helper surface
 │
 ├── infra/
 │   ├── docker/

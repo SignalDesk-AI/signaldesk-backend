@@ -30,6 +30,8 @@ tests/
 .github/workflows/
 ```
 
+`libs/building-blocks/dotnet` and `libs/building-blocks/nestjs` are the canonical shared library paths. Do not create parallel shared-code roots such as `libs/dotnet/BuildingBlocks` or `libs/node/common`.
+
 ## .NET Service Layout
 
 ```text

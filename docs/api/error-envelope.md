@@ -1,6 +1,73 @@
-# API Error Envelope
+# API Response Envelopes
 
-All services should converge on this error format:
+All client-facing services should converge on these response envelopes. Internal
+service-to-service APIs may use narrower contracts, but gateway-facing responses
+should keep the same top-level shape so FE integration can be predictable.
+
+## Success Envelope
+
+Use this format for single-resource or command responses:
+
+```json
+{
+  "data": {
+    "id": "..."
+  },
+  "meta": {
+    "correlationId": "..."
+  }
+}
+```
+
+`data` contains the endpoint-specific payload. For commands that do not return a
+resource, return a small status payload instead of `null`, for example:
+
+```json
+{
+  "data": {
+    "accepted": true
+  },
+  "meta": {
+    "correlationId": "..."
+  }
+}
+```
+
+## List Envelope
+
+Use this format for paginated list responses:
+
+```json
+{
+  "data": [
+    {
+      "id": "..."
+    }
+  ],
+  "meta": {
+    "correlationId": "...",
+    "pagination": {
+      "page": 1,
+      "pageSize": 20,
+      "totalItems": 125,
+      "totalPages": 7
+    }
+  }
+}
+```
+
+Cursor-based endpoints may replace `pagination` with:
+
+```json
+{
+  "nextCursor": "...",
+  "hasMore": true
+}
+```
+
+## Error Envelope
+
+Use this format for errors:
 
 ```json
 {
@@ -12,6 +79,8 @@ All services should converge on this error format:
   }
 }
 ```
+
+Error responses should not include a top-level `data` property.
 
 ## Common Error Codes
 

@@ -38,4 +38,4 @@ jobs:
           global-json-file: global.json
 
       - run: dotnet --info
-      - run: npm run build:dotnet
+      - run: powershell -ExecutionPolicy Bypass -File scripts/build-dotnet.ps1

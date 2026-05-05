@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SignalDesk.Identity.Application\SignalDesk.Identity.Application.csproj" />
     <ProjectReference Include="..\SignalDesk.Identity.Infrastructure\SignalDesk.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\..\libs\building-blocks\dotnet\BuildingBlocks.Infrastructure\BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

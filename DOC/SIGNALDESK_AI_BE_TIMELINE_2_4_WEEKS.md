@@ -78,7 +78,7 @@ Mục tiêu tuần 1: repo chạy được, infra local ổn định, auth và t
 ### Ngày 1 - Khởi Tạo Source Và Monorepo
 
 - Tạo repo/backend workspace `signaldesk-be`.
-- Chốt cấu trúc `services/`, `libs/`, `infra/`, `.github/workflows/`.
+- Chốt cấu trúc Nx `apps/`, `libs/`, `infra/`, `.github/workflows/`.
 - Tạo placeholder cho toàn bộ services:
   - NestJS: `gateway-bff`, `notification-service`, `search-service`, `ai-service`.
   - .NET: `identity-service`, `workspace-service`, `support-service`, `knowledge-service`, `campaign-service`.
@@ -94,8 +94,8 @@ Mục tiêu tuần 1: repo chạy được, infra local ổn định, auth và t
   - `messaging` nếu service consume/publish async.
   - module nghiệp vụ chính của service.
 - Tạo `libs/contracts/events` để chứa JSON Schema/event contract.
-- Tạo `libs/dotnet/BuildingBlocks` cho tenant context, base entity, result pattern, outbox, audit, observability.
-- Tạo `libs/node/common` cho config validation, logger, RabbitMQ helper, tracing helper.
+- Tạo `libs/building-blocks/dotnet` cho tenant context, base entity, result pattern, outbox, audit, observability.
+- Tạo `libs/building-blocks/nestjs` cho config validation, logger, RabbitMQ helper, tracing helper.
 - Chốt rule đặt tên env var, port, Docker network, service DNS name.
 - Handoff cho FE:
   - Gửi danh sách base URL local.

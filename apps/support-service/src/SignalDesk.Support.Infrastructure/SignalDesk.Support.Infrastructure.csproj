@@ -2,6 +2,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SignalDesk.Support.Application\SignalDesk.Support.Application.csproj" />
+    <ProjectReference Include="..\..\..\..\libs\building-blocks\dotnet\BuildingBlocks.Infrastructure\BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\..\libs\building-blocks\dotnet\BuildingBlocks.Messaging\BuildingBlocks.Messaging.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
