@@ -1,0 +1,9 @@
+{
+  "name": "building-blocks-nestjs",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/building-blocks/nestjs/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project building-blocks-nestjs --web",
+  "targets": {}
+}

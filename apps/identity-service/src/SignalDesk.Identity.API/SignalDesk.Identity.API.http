@@ -1,0 +1,6 @@
+@SignalDesk.Identity.API_HostAddress = http://localhost:5161
+
+GET {{SignalDesk.Identity.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

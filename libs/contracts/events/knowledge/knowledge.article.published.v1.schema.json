@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "knowledge.article.published.v1",
+  "title": "knowledge.article.published.v1",
+  "type": "object",
+  "required": ["eventId", "eventType", "tenantId", "occurredAt", "payload"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "knowledge.article.published.v1" },
+    "tenantId": { "type": "string", "format": "uuid" },
+    "correlationId": { "type": ["string", "null"] },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "payload": {
+      "type": "object",
+      "required": ["articleId", "versionId"],
+      "properties": {
+        "articleId": { "type": "string", "format": "uuid" },
+        "versionId": { "type": "string", "format": "uuid" }
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "identity.user.registered.v1",
+  "title": "identity.user.registered.v1",
+  "type": "object",
+  "required": ["eventId", "eventType", "occurredAt", "payload"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "identity.user.registered.v1" },
+    "tenantId": { "type": ["string", "null"], "format": "uuid" },
+    "correlationId": { "type": ["string", "null"] },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "payload": {
+      "type": "object",
+      "required": ["userId", "email"],
+      "properties": {
+        "userId": { "type": "string", "format": "uuid" },
+        "email": { "type": "string", "format": "email" }
+      }
+    }
+  }
+}

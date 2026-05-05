@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "support.ticket.created.v1",
+  "title": "support.ticket.created.v1",
+  "type": "object",
+  "required": ["eventId", "eventType", "tenantId", "occurredAt", "payload"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "support.ticket.created.v1" },
+    "tenantId": { "type": "string", "format": "uuid" },
+    "correlationId": { "type": ["string", "null"] },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "payload": {
+      "type": "object",
+      "required": ["ticketId", "ticketNo", "customerId"],
+      "properties": {
+        "ticketId": { "type": "string", "format": "uuid" },
+        "ticketNo": { "type": "string" },
+        "customerId": { "type": "string", "format": "uuid" }
+      }
+    }
+  }
+}
