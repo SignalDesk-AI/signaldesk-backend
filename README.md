@@ -17,6 +17,7 @@ tests/     integration and load test placeholders
 Useful Day 1 docs:
 
 - `docs/architecture/repo-structure.md`
+- `docs/architecture/local-runtime-rules.md`
 - `docs/handoff/service-port-map.md`
 - `docs/handoff/gateway-route-map.md`
 - `docs/api/error-envelope.md`
