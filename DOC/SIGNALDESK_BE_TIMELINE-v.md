@@ -97,7 +97,7 @@
 ## Phase 1 — Infrastructure Local: Docker Compose + DB Init
 
 > **Mục tiêu:** Toàn bộ infrastructure chạy local bằng Docker. Schemas + indexes khởi tạo xong.
-> **Tech tích hợp:** Docker Compose, PostgreSQL 16, PgBouncer, MongoDB 7, Redis 7, RabbitMQ 3.13, Elasticsearch 8, MinIO, Mailpit, Ollama
+> **Tech tích hợp:** Docker Compose, PostgreSQL 16, PgBouncer, MongoDB 7, Redis 7, RabbitMQ 3.13, Elasticsearch 8, Mailpit, Ollama, Supabase Storage external
 
 ### 1.1 — Viết `docker-compose.infra.yml`
 
@@ -105,14 +105,14 @@ Bao gồm các services sau (local dev only, chưa production):
 
 **Databases:**
 - `postgres` — PostgreSQL 16, port 5432, volume persistent
-- `pgbouncer` — PgBouncer, port 5433, transaction pooling, forward về `postgres:5432`
+- `pgbouncer` — PgBouncer, port 6432, transaction pooling, forward về `postgres:5432`
 - `mongodb` — MongoDB 7, port 27017, volume persistent
 - `redis` — Redis 7, port 6379, volume persistent
 
 **Messaging & Search:**
 - `rabbitmq` — RabbitMQ 3.13 với management plugin, port 5672 + 15672 (UI), volume persistent
 - `elasticsearch` — Elasticsearch 8, port 9200, single-node dev config, volume persistent
-- `minio` — MinIO, port 9000 + 9001 (console), volume persistent
+- `supabase-storage` — external managed object storage, private buckets, signed URL upload/download
 
 **Dev Tools:**
 - `mailpit` — SMTP server giả lập, port 1025 (SMTP) + 8025 (UI)
@@ -260,11 +260,11 @@ kb_articles_v1:
     published_at: date
 ```
 
-### 1.6 — Tạo MinIO Buckets
+### 1.6 — Tạo Supabase Storage Buckets
 
-- Tạo bucket `kb-files` (private, versioning on)
-- Tạo bucket `ticket-attachments` (private)
-- Tạo service account / access key cho `knowledge-service`
+- Tạo bucket private `signaldesk-attachments`
+- Tạo bucket private `signaldesk-temp-uploads`
+- Tạo/cấu hình `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` cho backend
 
 ### 1.7 — Structured Logging Setup (Serilog + Winston)
 
@@ -309,7 +309,7 @@ Tạo `.github/workflows/ci.yml`:
   - `System.IdentityModel.Tokens.Jwt`, `Microsoft.AspNetCore.Authentication.JwtBearer`
   - `Hangfire.AspNetCore`, `Hangfire.PostgreSql`
   - `OpenTelemetry.Extensions.Hosting`, `OpenTelemetry.Instrumentation.AspNetCore` (cài trước, wire sau)
-- Cấu hình `appsettings.json`: connection strings qua PgBouncer (port 5433), JWT settings (issuer, audience, RS256 key path), BCrypt cost
+- Cấu hình `appsettings.json`: connection strings qua PgBouncer (port 6432), JWT settings (issuer, audience, RS256 key path), BCrypt cost
 - Generate RSA key pair cho JWT RS256 (private key trong service, public key chia sẻ với gateway)
 
 ### 2.2 — EF Core + Database Context
@@ -711,12 +711,12 @@ Map từng route group về downstream service:
 
 ## Phase 7 — Knowledge Service: Article + Versioning + File Upload
 
-> **Mục tiêu:** Article CRUD với versioning đầy đủ, publish workflow, file upload qua MinIO presigned URL.
-> **Tech tích hợp:** ASP.NET Core 8, EF Core 8, MediatR, MinIO .NET SDK, Outbox Pattern
+> **Mục tiêu:** Article CRUD với versioning đầy đủ, publish workflow, file upload qua Supabase Storage signed URL.
+> **Tech tích hợp:** Docker Compose, PostgreSQL 16, PgBouncer, MongoDB 7, Redis 7, RabbitMQ 3.13, Elasticsearch 8, Mailpit, Ollama, Supabase Storage external
 
 ### 7.1 — Project Setup `knowledge-service`
 
-- Packages: EF Core, MediatR, FluentValidation, `Minio` (.NET SDK), RabbitMQ client
+- Packages: EF Core, MediatR, FluentValidation, RabbitMQ client, Supabase Storage/HTTP client
 
 ### 7.2 — Domain Layer
 
@@ -736,9 +736,9 @@ Map từng route group về downstream service:
 - `CreateCategoryCommand`, `UpdateCategoryCommand`, `DeleteCategoryCommand`
 
 **File Upload Flow:**
-- `GenerateUploadUrlCommand`: generate MinIO presigned PUT URL (15 phút TTL), return URL + object key
-- Client upload trực tiếp → MinIO (không qua service)
-- `ConfirmUploadCommand`: verify object tồn tại trong MinIO, store reference trong article metadata
+- `GenerateUploadUrlCommand`: generate Supabase Storage signed upload URL (15 phút TTL), return URL + object key
+- Client upload trực tiếp → Supabase Storage (không qua service)
+- `ConfirmUploadCommand`: verify object/metadata trong Supabase Storage, store reference trong article metadata
 
 **Queries:**
 - `GetArticleQuery` + Handler: load ArticleVersion theo version (default: published_version)
@@ -758,7 +758,7 @@ Map từng route group về downstream service:
 - `DELETE /kb/articles/{id}`
 - `GET /kb/articles/{id}/versions`
 - `GET /kb/categories`, `POST /kb/categories`
-- `POST /kb/upload-url` → generate presigned URL
+- `POST /kb/upload-url` → generate signed URL
 - `POST /kb/upload-confirm` → confirm upload
 
 ---
@@ -1247,13 +1247,13 @@ mongodb
 redis
 rabbitmq
 elasticsearch
-minio
+supabase-storage (external)
 ↓
 identity-service (depends: postgres, redis, rabbitmq)
 workspace-service (depends: postgres, redis, rabbitmq)
 ↓
 support-service (depends: postgres, redis, rabbitmq)
-knowledge-service (depends: postgres, redis, rabbitmq, minio)
+knowledge-service (depends: postgres, redis, rabbitmq, supabase-storage external)
 notification-service (depends: mongodb, redis, rabbitmq)
 search-service (depends: elasticsearch, redis, rabbitmq)
 ai-service (depends: elasticsearch, mongodb, redis, rabbitmq)
@@ -1604,13 +1604,13 @@ Verify 4 demo scenarios hoạt động:
 | Phase | Services | Tech Mới Tích Hợp |
 |-------|----------|-------------------|
 | 0 | Tất cả | NX monorepo, Docker Compose infra |
-| 1 | Infra | PostgreSQL, PgBouncer, MongoDB, Redis, RabbitMQ, Elasticsearch, MinIO, Mailpit, Ollama |
+| 1 | Infra | PostgreSQL, PgBouncer, MongoDB, Redis, RabbitMQ, Elasticsearch, Mailpit, Ollama, Supabase Storage external |
 | 2 | identity-service | EF Core 8, MediatR, FluentValidation, BCrypt, JWT RS256, Hangfire |
 | 3 | workspace-service | Redis cache (permissions), internal HTTP calls |
 | 4 | gateway-bff | NestJS JWT guard, Socket.io, Redis rate limit |
 | 5 | support-service | CQRS pattern, optimistic locking, FOR UPDATE ticket_no |
 | 6 | notification-service | BullMQ, Nodemailer, Handlebars, Redis inbox dedup |
-| 7 | knowledge-service | MinIO presigned URL, versioning pattern |
+| 7 | knowledge-service | Supabase Storage signed URL, versioning pattern |
 | 8 | Tất cả .NET | Outbox SKIP LOCKED, Inbox dedup, exponential backoff |
 | 9 | search-service | ES hybrid search (BM25+kNN), embedding jobs, Painless script |
 | 10 | ai-service | LangChain.js, OpenAI SDK, Ollama, confidence scoring, circuit breaker |

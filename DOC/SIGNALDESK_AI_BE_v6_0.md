@@ -114,7 +114,7 @@ Mỗi tenant: 20–30 KB articles, 50–100 FAQ, 80–150 tickets, 300–800 tic
 **Infrastructure:**
 - PostgreSQL 16 + **PgBouncer** (connection pooling)
 - MongoDB 7, Redis 7, Elasticsearch 8
-- MinIO/S3, RabbitMQ 3.13
+- Supabase Storage, RabbitMQ 3.13
 - OpenTelemetry → Jaeger/Tempo, Prometheus → Grafana, Loki + Promtail
 - Nginx (reverse proxy + SSL), GitHub Actions (CI/CD)
 
@@ -185,7 +185,7 @@ Gateway:
 | **Redis 7** | Cache, session, rate limiting, presence, idempotency, distributed lock |
 | **RabbitMQ** | Message broker — workflow-based messaging, DLQ tốt, dễ vận hành solo |
 | **Elasticsearch 8** | Search engine — keyword BM25 + dense_vector kNN hybrid |
-| **MinIO** | File storage S3-compatible |
+| **Supabase Storage** | Managed private object storage cho attachments/tài liệu; backend lưu metadata và tạo signed URL |
 | **Docker + Docker Compose** | Local dev + production deploy |
 | **Nginx** | Reverse proxy, SSL termination, gzip |
 | **GitHub Actions** | CI/CD |
@@ -393,15 +393,15 @@ Gateway:
 
 #### `knowledge-service` — ASP.NET Core 8 :5004
 
-**Vai trò:** Article CRUD với versioning đầy đủ, publish/unpublish workflow, category management, file upload via presigned URL → MinIO.
+**Vai trò:** Article CRUD với versioning đầy đủ, publish/unpublish workflow, category management, file upload qua signed URL → Supabase Storage.
 
-**Tech stack:** ASP.NET Core 8, EF Core 8, MediatR, FluentValidation, MinIO SDK
+**Tech stack:** ASP.NET Core 8, EF Core 8, MediatR, FluentValidation, Supabase Storage client / HTTP signed upload integration
 
 **Data ownership:**
 - `knowledge.articles` — source of truth cho article metadata + status
 - `knowledge.article_versions` — source of truth cho article content (immutable per version)
 - `knowledge.categories`
-- MinIO bucket `kb-files` — source of truth cho binary attachments
+- Supabase Storage private buckets `signaldesk-attachments`, `signaldesk-temp-uploads` — source of truth cho binary attachments
 
 **Produces events:**
 - `knowledge.article.published.v1` → search-service (text index + embedding), portal (ISR)
@@ -411,7 +411,7 @@ Gateway:
 
 **Sync dependencies:**
 - `workspace-service` — RBAC check (author/editor/admin)
-- MinIO — presigned URL generation (nội bộ)
+- Supabase Storage — signed upload/download URL generation
 
 **Async dependencies:**
 - `search-service` nhận `article.published.v1` → ES upsert + embedding job
@@ -424,7 +424,7 @@ Gateway:
 **Key behaviors:**
 - Publish = snapshot: copy latest draft content → `article_versions` (immutable) + set status=Published
 - Versioning: `UNIQUE(article_id, version)` — version auto-increment per article
-- File upload: service generate presigned URL → client upload trực tiếp → MinIO → service confirm
+- File upload: service generate signed upload URL → client upload trực tiếp → Supabase Storage → service confirm
 
 ---
 
@@ -590,12 +590,12 @@ Gateway:
 | Service | Port | Notes |
 |---------|------|-------|
 | PostgreSQL 16 | 5432 | apps connect qua PgBouncer, không direct |
-| PgBouncer | 5433 | transaction pooling, max_pool=25 |
+| PgBouncer | 6432 | transaction pooling, max_pool=25 |
 | MongoDB 7 | 27017 | ai-service, notification-service |
 | Redis 7 | 6379 | tất cả services |
 | RabbitMQ 3.13 | 5672 / 15672 (UI) | event bus |
 | Elasticsearch 8 | 9200 | search-service, ai-service |
-| MinIO | 9000 / 9001 (console) | knowledge-service |
+| Supabase Storage | external managed service | knowledge-service attachments, internal documents |
 | Prometheus | 9090 | |
 | Grafana | 3100 | |
 | Jaeger / Tempo | 16686 / 3200 | |
@@ -619,7 +619,7 @@ Gateway:
 | **MongoDB** | ai_runs, chat_sessions, customer_memory, email_templates, in-app notifications | ✅ YES — cho AI domain data (bán cấu trúc, schema-free) | Eventual (replica) | ai_runs: 90 ngày; memory: permanent |
 | **Redis** | Cache (ticket, KB, permissions), session, rate limiter, distributed lock, presence, pub/sub | ❌ Projection / volatile | Volatile — TTL-based | TTL 30s → 3600s |
 | **Elasticsearch** | Full-text + semantic search (tickets + KB), dense_vector kNN | ❌ Read model — eventual consistency | Eventual ≤ 5s from PostgreSQL/MongoDB | Permanent (index alias) |
-| **MinIO / S3** | Binary files: KB article attachments, uploaded images, exports | ✅ YES — binary blob store | Strong (object storage) | Policy per bucket |
+| **Supabase Storage** | Binary files: KB article attachments, uploaded images, internal documents, exports | ✅ YES — binary blob store | Strong object semantics + signed URL access | Policy per private bucket |
 
 ---
 
@@ -641,7 +641,7 @@ Tenant / RBAC:
 KB article content:
   → PostgreSQL knowledge.article_versions (immutable snapshots per version)
   → Elasticsearch kb_articles_v1 = search + vector retrieval (read model, maintained only by search-service)
-  → MinIO = binary attachments
+  → Supabase Storage = binary attachments/private internal documents
 
 AI inference history:
   → MongoDB ai_runs (immutable append-only per inference)
@@ -831,7 +831,7 @@ signaldesk-be/              ← NX monorepo
 ### PostgreSQL Strategy
 
 Một PostgreSQL instance `signaldesk`, tách theo schema để giữ logical boundary theo service.
-Apps kết nối qua **PgBouncer :5433** (transaction pooling, max_pool=25 per database).
+Apps kết nối qua **PgBouncer :6432** (transaction pooling, max_pool=25 per database).
 
 **Schemas trong PostgreSQL:** `identity`, `workspace`, `support`, `knowledge`, `campaign`, `ops`
 
@@ -2429,7 +2429,7 @@ POST /api/campaigns/{id}/schedule
 ### Tuần 1: Foundation
 ```
 ✓ NX monorepo setup
-✓ docker-compose.infra.yml: PostgreSQL + PgBouncer, MongoDB, Redis, RabbitMQ, ES, MinIO, Mailpit, Ollama
+✓ docker-compose.infra.yml: PostgreSQL + PgBouncer, MongoDB, Redis, RabbitMQ, ES, Mailpit, Ollama; Supabase Storage external
 ✓ RabbitMQ: exchanges + queues + DLQ + bindings
 ✓ PostgreSQL: tạo schemas + composite indexes
 ✓ BuildingBlocks .NET, common NestJS
@@ -2460,7 +2460,7 @@ POST /api/campaigns/{id}/schedule
 ### Tuần 4: Knowledge Service
 ```
 ✓ knowledge-service: article CRUD, versioning (article_versions), publish workflow
-✓ File upload: presigned URL → MinIO
+✓ File upload: signed upload URL → Supabase Storage
 ✓ Publish: status=Published + ghi outbox
 ```
 
@@ -2624,7 +2624,7 @@ Panels:
   - Redis eviction rate — counter (eviction = cache hit rate sẽ drop)
   - Elasticsearch heap usage — gauge (alert > 75%)
   - Elasticsearch indexing rate vs search rate — dual time series
-  - MinIO disk usage — gauge
+  - Supabase Storage usage/quota and upload error rate — gauge/counter
 
 Dùng khi: performance degradation không rõ nguyên nhân, capacity review
 ```
@@ -2790,7 +2790,7 @@ Deliverables hoàn thành:
 | gRPC internal communication | ✅ Bổ sung | Dùng gRPC cho các internal sync call cần low-latency và strongly typed contract: `workspace.AuthorizationGrpc.CheckPermission`, `identity.UserGrpc.GetUserProfile`, `support.TicketGrpc.GetTicketSnapshot`. REST vẫn dùng cho client-facing API. |
 | Message Queue | ✅ Có | RabbitMQ là message broker chính cho event-driven processing: notification, AI enrichment, search indexing, campaign dispatch. Kafka là stretch goal cho analytics stream nếu throughput tăng. |
 | WebSocket / SignalR | ✅ Có | Socket.io WebSocket qua gateway cho live chat, typing indicator, presence, lock status, ticket update realtime. Nếu chuyển gateway sang .NET thì có thể thay bằng SignalR. |
-| Docker + Docker Compose | ✅ Có | Toàn bộ service và infra được containerize bằng Docker Compose: PostgreSQL, PgBouncer, MongoDB, Redis, RabbitMQ, Elasticsearch, object storage, observability stack. |
+| Docker + Docker Compose | ✅ Có | Toàn bộ service và local infra được containerize bằng Docker Compose: PostgreSQL, PgBouncer, MongoDB, Redis, RabbitMQ, Elasticsearch, Mailpit, Ollama, observability stack. Object storage dùng Supabase Storage managed service. |
 
 **gRPC boundary rule:**
 ```
@@ -2857,15 +2857,15 @@ Demo fallback: pgvector
 
 | Yêu cầu | Trạng thái | Thiết kế áp dụng trong SignalDesk AI |
 |---------|------------|---------------------------------------|
-| Supabase Storage / Cloudflare R2 | ✅ Bổ sung | Production/demo cloud dùng Cloudflare R2 hoặc Supabase Storage qua S3-compatible API. MinIO chỉ dùng local development để giả lập S3. |
-| Không lưu file trên disk server | ✅ Có | File/ảnh/tài liệu upload bằng presigned URL trực tiếp lên object storage. Backend chỉ lưu metadata và object key. |
-| Dễ migrate S3 SDK | ✅ Có | `knowledge-service` dùng abstraction `IObjectStorageClient`; provider local = MinIO, provider cloud = Cloudflare R2/Supabase Storage. |
+| Supabase Storage | ✅ Có | Object storage chính cho local/dev/demo/production. Bucket private, truy cập qua signed upload/download URL. Local stack không chạy object-storage container mặc định. |
+| Không lưu file trên disk server | ✅ Có | File/ảnh/tài liệu upload bằng signed URL trực tiếp lên object storage. Backend chỉ lưu metadata và object key. |
+| Dễ migrate provider | ✅ Có | `knowledge-service` dùng abstraction `IObjectStorageClient`; provider mặc định = Supabase Storage, có thể thêm Cloudflare R2/S3 sau nếu cần. |
 
 **Object storage policy:**
 ```
-Local dev:        MinIO
-Demo cloud:       Cloudflare R2 hoặc Supabase Storage
-API style:        S3-compatible presigned URL
+Local/dev:        Supabase Storage
+Demo/production:  Supabase Storage
+API style:        signed upload/download URL
 Metadata store:   PostgreSQL knowledge.article_attachments
 Binary source:    Object storage bucket, never server disk
 ```

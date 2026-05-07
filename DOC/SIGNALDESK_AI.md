@@ -213,7 +213,7 @@ SignalDesk AI cung cấp workspace đa tenant nơi doanh nghiệp có thể:
 
 Infrastructure:
 - Elasticsearch (search + vector)
-- MinIO / S3 (file storage)
+- Supabase Storage (private object storage)
 - OpenTelemetry → Jaeger/Tempo (traces)
 - Prometheus → Grafana (metrics + alerts)
 - Loki + Promtail (logs)
@@ -301,7 +301,7 @@ AI level:
 | **Redis 7** | Cache, session, rate limiting, presence, idempotency, distributed lock |
 | **RabbitMQ** | Message broker giai đoạn đầu — phù hợp workflow business, dễ vận hành hơn Kafka cho solo dev, hỗ trợ DLQ tốt |
 | **Elasticsearch 8** | Search engine chính — keyword search + dense_vector cho semantic search (hybrid) |
-| **MinIO** | File storage S3-compatible cho attachments |
+| **Supabase Storage** | Managed private object storage cho attachments/tài liệu |
 | **Docker + Docker Compose** | Local dev + production deploy |
 | **Nginx** | Reverse proxy, SSL termination, gzip |
 | **GitHub Actions** | CI/CD |
@@ -381,7 +381,7 @@ AI level:
 | Redis 7 | 6379 | gateway, tất cả services |
 | RabbitMQ 3.13 | 5672 / 15672 (UI) | event bus cho mọi service |
 | Elasticsearch 8 | 9200 | search-service, ai-service |
-| MinIO | 9000 / 9001 (console) | knowledge-service (file attachments) |
+| Supabase Storage | external managed service | knowledge-service attachments/internal documents |
 | Prometheus | 9090 | metrics scraping |
 | Grafana | 3100 | dashboards |
 | Jaeger / Tempo | 16686 / 3200 | distributed tracing |
@@ -949,7 +949,7 @@ CREATE TABLE knowledge.article_versions (
 CREATE TABLE knowledge.files (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id    UUID NOT NULL,
-  storage_key  VARCHAR(500) NOT NULL,  -- MinIO object key
+  storage_key  VARCHAR(500) NOT NULL,  -- Supabase Storage object key
   filename     VARCHAR(255) NOT NULL,
   mime_type    VARCHAR(100),
   size_bytes   BIGINT,
@@ -2002,7 +2002,7 @@ POST /api/campaigns/{id}/schedule
 ```
 ✓ Tạo signaldesk-fe (Turborepo) + signaldesk-be (NX)
 ✓ docker-compose.infra.yml:
-  PostgreSQL, MongoDB, Redis, RabbitMQ, Elasticsearch, MinIO, Mailpit, Ollama
+  PostgreSQL, MongoDB, Redis, RabbitMQ, Elasticsearch, Mailpit, Ollama; Supabase Storage external
 ✓ RabbitMQ: tạo exchanges + queues + bindings + DLQ
 ✓ PostgreSQL: tạo schemas (identity, workspace, support, knowledge, notification, ops)
 ✓ Shared libs bootstrap (BuildingBlocks .NET, common NestJS)
@@ -2080,7 +2080,7 @@ POST /api/campaigns/{id}/schedule
   - Migrations: categories, articles, article_versions, files
   - Commands: CreateArticle, UpdateArticle, PublishArticle, UnpublishArticle
   - Versioning: mỗi lần save tạo article_version mới
-  - File upload: presigned URL → MinIO
+  - File upload: signed upload URL → Supabase Storage
   - Publish: status = Published + ghi outbox
 ✓ Next.js workspace (Admin):
   - KB management pages: article list, TipTap WYSIWYG editor

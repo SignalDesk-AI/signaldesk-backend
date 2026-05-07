@@ -1,0 +1,112 @@
+Để test Day 2 infra “đã tốt chưa”, bạn nên kiểm theo 3 tầng: compose hợp lệ, container sống, dependency dùng được thật.
+
+1. Validate cấu hình Compose
+
+docker compose -f infra/docker/docker-compose.local.yml config
+docker compose -f infra/docker/docker-compose.observability.yml config
+Nếu cả hai không lỗi là YAML, volume, network, env đã parse được.
+
+2. Start đúng thứ tự
+
+docker compose -f infra/docker/docker-compose.local.yml up -d
+docker compose -f infra/docker/docker-compose.observability.yml up -d
+Sau đó xem trạng thái:
+
+docker compose -f infra/docker/docker-compose.local.yml ps
+docker compose -f infra/docker/docker-compose.observability.yml ps
+Kỳ vọng: Postgres, Redis, RabbitMQ, PgBouncer là healthy; các service khác ít nhất là Up.
+
+3. Test từng dependency thật sự dùng được
+
+Postgres schema:
+
+docker exec -e PGPASSWORD=signaldesk signaldesk-postgres psql -U signaldesk -d signaldesk -c "select schema_name from information_schema.schemata where schema_name in ('identity','workspace','support','knowledge','campaign','ops') order by schema_name;"
+
+Kỳ vọng có đủ:
+
+campaign
+identity
+knowledge
+ops
+support
+workspace
+Ops baseline tables:
+
+docker exec -e PGPASSWORD=signaldesk signaldesk-postgres psql -U signaldesk -d signaldesk -c "select table_name from information_schema.tables where table_schema='ops' order by table_name;"
+Kỳ vọng có:
+
+audit_logs
+dead_letters
+idempotency_keys
+inbox_messages
+outbox_events
+PgBouncer:
+
+docker exec -e PGPASSWORD=signaldesk signaldesk-postgres psql -h pgbouncer -p 5432 -U signaldesk -d signaldesk -c "select 1 as pgbouncer_ok;"
+Kỳ vọng:
+
+pgbouncer_ok
+1
+Redis:
+
+docker exec signaldesk-redis redis-cli ping
+Kỳ vọng:
+
+PONG
+RabbitMQ topology:
+
+docker exec signaldesk-rabbitmq rabbitmqctl list_exchanges name type durable
+docker exec signaldesk-rabbitmq rabbitmqctl list_queues name durable
+docker exec signaldesk-rabbitmq rabbitmqctl list_bindings source_name destination_name routing_key
+Kỳ vọng thấy signaldesk.domain-events, signaldesk.domain-events.dlx, các queue notification.events, search.indexing, ai.tasks, campaign.events, kèm retry/DLQ queues.
+
+MongoDB:
+
+docker exec signaldesk-mongodb mongosh --quiet --eval "db.adminCommand({ ping: 1 }).ok"
+Kỳ vọng:
+
+1
+Elasticsearch:
+
+Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:9200" | Select-Object -ExpandProperty StatusCode
+Kỳ vọng:
+
+200
+Mailpit:
+
+Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:8025" | Select-Object -ExpandProperty StatusCode
+Kỳ vọng 200.
+
+Ollama:
+
+Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:11434/api/tags" | Select-Object -ExpandProperty StatusCode
+Kỳ vọng 200.
+
+Observability:
+
+Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:9090/-/ready" | Select-Object -ExpandProperty StatusCode
+Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:3009/api/health" | Select-Object -ExpandProperty StatusCode
+Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:16686" | Select-Object -ExpandProperty StatusCode
+Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:3100/ready" | Select-Object -ExpandProperty StatusCode
+Kỳ vọng đều 200. Loki đôi khi cần chờ 15-20 giây sau khi start.
+
+Definition of Done cho Day 2
+
+Day 2 có thể coi là ổn khi:
+
+Compose config pass.
+Local infra start lại được từ trạng thái sạch.
+Postgres tạo đủ schema và bảng ops.
+PgBouncer query được.
+RabbitMQ có exchange, queues, retry, DLQ, bindings đúng.
+Redis/Mongo/ES/Mailpit/Ollama phản hồi OK.
+Observability stack mở được Prometheus/Grafana/Jaeger/Loki.
+Docs có port map và lệnh start/check/stop.
+.env.example có đủ biến local/dev nhưng không chứa secret thật.
+Lệnh reset sạch để test lại từ đầu, chỉ dùng khi bạn không cần giữ data local:
+
+docker compose -f infra/docker/docker-compose.observability.yml down -v
+docker compose -f infra/docker/docker-compose.local.yml down -v
+docker compose -f infra/docker/docker-compose.local.yml up -d
+docker compose -f infra/docker/docker-compose.observability.yml up -d
+Sau đó chạy lại các lệnh verify ở trên. Đây là cách chắc nhất để biết init script, volume, network và topology có tái tạo được từ zero hay không.

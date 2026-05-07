@@ -1,0 +1,338 @@
+{
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "users": [
+    {
+      "name": "signaldesk",
+      "password_hash": "U0RBSWFJ3J94SpDA72eHDmTOyjmLhBIhCHxxK2rSZSjyfYUv",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": [
+        "administrator"
+      ]
+    }
+  ],
+  "permissions": [
+    {
+      "user": "signaldesk",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "signaldesk.domain-events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "signaldesk.domain-events.dlx",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "notification.events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "signaldesk.domain-events.dlx",
+        "x-dead-letter-routing-key": "notification.events.retry"
+      }
+    },
+    {
+      "name": "notification.events.retry",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl": 30000,
+        "x-dead-letter-exchange": "signaldesk.domain-events",
+        "x-dead-letter-routing-key": "notification.events.replay"
+      }
+    },
+    {
+      "name": "notification.events.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "search.indexing",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "signaldesk.domain-events.dlx",
+        "x-dead-letter-routing-key": "search.indexing.retry"
+      }
+    },
+    {
+      "name": "search.indexing.retry",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl": 30000,
+        "x-dead-letter-exchange": "signaldesk.domain-events",
+        "x-dead-letter-routing-key": "search.indexing.replay"
+      }
+    },
+    {
+      "name": "search.indexing.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "ai.tasks",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "signaldesk.domain-events.dlx",
+        "x-dead-letter-routing-key": "ai.tasks.retry"
+      }
+    },
+    {
+      "name": "ai.tasks.retry",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl": 60000,
+        "x-dead-letter-exchange": "signaldesk.domain-events",
+        "x-dead-letter-routing-key": "ai.tasks.replay"
+      }
+    },
+    {
+      "name": "ai.tasks.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "campaign.events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "signaldesk.domain-events.dlx",
+        "x-dead-letter-routing-key": "campaign.events.retry"
+      }
+    },
+    {
+      "name": "campaign.events.retry",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl": 30000,
+        "x-dead-letter-exchange": "signaldesk.domain-events",
+        "x-dead-letter-routing-key": "campaign.events.replay"
+      }
+    },
+    {
+      "name": "campaign.events.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "signaldesk.domain-events",
+      "vhost": "/",
+      "destination": "notification.events",
+      "destination_type": "queue",
+      "routing_key": "identity.#",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events",
+      "vhost": "/",
+      "destination": "notification.events",
+      "destination_type": "queue",
+      "routing_key": "workspace.#",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events",
+      "vhost": "/",
+      "destination": "notification.events",
+      "destination_type": "queue",
+      "routing_key": "support.ticket.#",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events",
+      "vhost": "/",
+      "destination": "notification.events",
+      "destination_type": "queue",
+      "routing_key": "campaign.#",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events",
+      "vhost": "/",
+      "destination": "notification.events",
+      "destination_type": "queue",
+      "routing_key": "notification.events.replay",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events",
+      "vhost": "/",
+      "destination": "search.indexing",
+      "destination_type": "queue",
+      "routing_key": "support.ticket.#",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events",
+      "vhost": "/",
+      "destination": "search.indexing",
+      "destination_type": "queue",
+      "routing_key": "knowledge.article.#",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events",
+      "vhost": "/",
+      "destination": "search.indexing",
+      "destination_type": "queue",
+      "routing_key": "search.indexing.replay",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events",
+      "vhost": "/",
+      "destination": "ai.tasks",
+      "destination_type": "queue",
+      "routing_key": "support.ticket.created.v1",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events",
+      "vhost": "/",
+      "destination": "ai.tasks",
+      "destination_type": "queue",
+      "routing_key": "support.ticket.resolved.v1",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events",
+      "vhost": "/",
+      "destination": "ai.tasks",
+      "destination_type": "queue",
+      "routing_key": "knowledge.article.published.v1",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events",
+      "vhost": "/",
+      "destination": "ai.tasks",
+      "destination_type": "queue",
+      "routing_key": "ai.tasks.replay",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events",
+      "vhost": "/",
+      "destination": "campaign.events",
+      "destination_type": "queue",
+      "routing_key": "support.ticket.resolved.v1",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events",
+      "vhost": "/",
+      "destination": "campaign.events",
+      "destination_type": "queue",
+      "routing_key": "campaign.events.replay",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events.dlx",
+      "vhost": "/",
+      "destination": "notification.events.retry",
+      "destination_type": "queue",
+      "routing_key": "notification.events.retry",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events.dlx",
+      "vhost": "/",
+      "destination": "notification.events.dlq",
+      "destination_type": "queue",
+      "routing_key": "notification.events.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events.dlx",
+      "vhost": "/",
+      "destination": "search.indexing.retry",
+      "destination_type": "queue",
+      "routing_key": "search.indexing.retry",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events.dlx",
+      "vhost": "/",
+      "destination": "search.indexing.dlq",
+      "destination_type": "queue",
+      "routing_key": "search.indexing.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events.dlx",
+      "vhost": "/",
+      "destination": "ai.tasks.retry",
+      "destination_type": "queue",
+      "routing_key": "ai.tasks.retry",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events.dlx",
+      "vhost": "/",
+      "destination": "ai.tasks.dlq",
+      "destination_type": "queue",
+      "routing_key": "ai.tasks.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events.dlx",
+      "vhost": "/",
+      "destination": "campaign.events.retry",
+      "destination_type": "queue",
+      "routing_key": "campaign.events.retry",
+      "arguments": {}
+    },
+    {
+      "source": "signaldesk.domain-events.dlx",
+      "vhost": "/",
+      "destination": "campaign.events.dlq",
+      "destination_type": "queue",
+      "routing_key": "campaign.events.dlq",
+      "arguments": {}
+    }
+  ]
+}

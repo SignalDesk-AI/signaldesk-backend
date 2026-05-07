@@ -59,12 +59,12 @@ Tạo file `docker-compose.infra.yml` với các services sau (theo đúng port 
 | Service | Image | Port |
 |---------|-------|------|
 | PostgreSQL 16 | `postgres:16-alpine` | 5432 |
-| PgBouncer | `edoburu/pgbouncer` | 5433 |
+| PgBouncer | `edoburu/pgbouncer` | 6432 |
 | MongoDB 7 | `mongo:7` | 27017 |
 | Redis 7 | `redis:7-alpine` | 6379 |
 | RabbitMQ 3.13 | `rabbitmq:3.13-management` | 5672, 15672 |
 | Elasticsearch 8 | `elasticsearch:8.x` | 9200 |
-| MinIO | `minio/minio` | 9000, 9001 |
+| Supabase Storage | external managed service | signed URL upload/download |
 | Mailpit | `axllent/mailpit` | 1025, 8025 |
 | Ollama | `ollama/ollama` | 11434 |
 
@@ -83,7 +83,7 @@ identity / workspace / support / knowledge / campaign / ops
 
 #### 1.4 ⚙️ PgBouncer Config
 - Cấu hình `pgbouncer.ini`: `pool_mode = transaction`, `max_client_conn = 100`, `default_pool_size = 25`
-- Verify: tất cả services sẽ connect qua port `5433` (PgBouncer), không phải `5432` (PostgreSQL trực tiếp)
+- Verify: tất cả services sẽ connect qua port `6432` (PgBouncer), không phải `5432` (PostgreSQL trực tiếp)
 
 #### 1.5 ⚙️ RabbitMQ Exchanges & Queues
 Tạo `scripts/rabbitmq-setup.sh` (chạy qua RabbitMQ CLI hoặc Management API) để khởi tạo:
@@ -345,7 +345,7 @@ Mỗi consumer đều: inbox dedup (MongoDB) → process → ack
 
 ## TUẦN 2 — Support Core, Knowledge Service, Outbox/Inbox Hoàn Chỉnh
 
-> **Mục tiêu cuối tuần:** Ticket lifecycle đầy đủ, Knowledge Base CRUD + publish + versioning, Outbox+Inbox hoàn chỉnh, file upload qua MinIO.
+> **Mục tiêu cuối tuần:** Ticket lifecycle đầy đủ, Knowledge Base CRUD + publish + versioning, Outbox+Inbox hoàn chỉnh, file upload qua Supabase Storage.
 
 ---
 
@@ -481,10 +481,10 @@ Tương tự cấu trúc Clean Architecture với:
 - `UnpublishArticle` → set status Archived, thêm outbox event `knowledge.article.unpublished.v1`
 - Soft delete: `deleted_at` không xóa versions
 
-#### 8.4 🔗 MinIO File Upload
-- Pre-signed URL flow:
-  - `POST /api/kb/articles/{id}/attachments/presign` → tạo pre-signed PUT URL từ MinIO, trả URL cho FE
-  - FE upload trực tiếp lên MinIO (không qua backend)
+#### 8.4 Supabase Storage File Upload
+- Signed URL flow:
+  - `POST /api/kb/articles/{id}/attachments/presign` → tạo signed upload URL từ Supabase Storage, trả URL cho FE
+  - FE upload trực tiếp lên Supabase Storage (không qua backend)
   - `POST /api/kb/articles/{id}/attachments/confirm` → ghi `knowledge.article_attachments` record
 
 #### 8.5 🧩 Outbox Events — knowledge-service
@@ -1024,7 +1024,7 @@ Ngày 4: notification-service (phụ thuộc: RabbitMQ, MongoDB, Redis)
          ↓
 Ngày 6–7: support-service (phụ thuộc: PostgreSQL, RabbitMQ, Redis, Hangfire)
          ↓
-Ngày 8: knowledge-service (phụ thuộc: PostgreSQL, RabbitMQ, MinIO)
+Ngày 8: knowledge-service (phụ thuộc: PostgreSQL, RabbitMQ, Supabase Storage external)
          ↓
 Ngày 11–12: search-service (phụ thuộc: Elasticsearch, RabbitMQ, MongoDB)
          ↓
@@ -1051,12 +1051,12 @@ Ngày 17+: deploy, observability, testing
 | ai-service | 3003 | NestJS |
 | campaign-service | 5005 | .NET (optional) |
 | PostgreSQL | 5432 | direct (chỉ dùng nội bộ) |
-| PgBouncer | 5433 | services kết nối qua đây |
+| PgBouncer | 6432 | services kết nối qua đây |
 | MongoDB | 27017 | |
 | Redis | 6379 | |
 | RabbitMQ | 5672 / 15672 | 15672 = Management UI |
 | Elasticsearch | 9200 | |
-| MinIO | 9000 / 9001 | 9001 = Console |
+| Supabase Storage | external managed service | signed URL upload/download |
 | Prometheus | 9090 | |
 | Grafana | 3100 | |
 | Jaeger | 16686 | UI |

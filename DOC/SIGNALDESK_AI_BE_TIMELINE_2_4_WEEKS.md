@@ -26,7 +26,7 @@ Nguyên tắc triển khai:
 ### Core Platform
 
 - `signaldesk-be` monorepo.
-- Local infrastructure bằng Docker Compose: PostgreSQL, PgBouncer, MongoDB, Redis, RabbitMQ, Elasticsearch, MinIO, Mailpit, Ollama.
+- Local infrastructure bằng Docker Compose: PostgreSQL, PgBouncer, MongoDB, Redis, RabbitMQ, Elasticsearch, Mailpit, Ollama. Object storage dùng Supabase Storage external.
 - `gateway-bff` bằng NestJS.
 - `identity-service`, `workspace-service`, `support-service`, `knowledge-service` bằng ASP.NET Core 8.
 - `notification-service`, `search-service`, `ai-service` bằng NestJS.
@@ -117,7 +117,7 @@ Deliverable cuối ngày:
   - Redis 7.
   - RabbitMQ 3.13 kèm management UI.
   - Elasticsearch 8.
-  - MinIO.
+  - Supabase Storage external (không chạy container local).
   - Mailpit.
   - Ollama.
 - Tạo Compose riêng cho observability hoặc bật dần:
@@ -143,10 +143,10 @@ Deliverable cuối ngày:
   - queue theo workload: notification, search-index, ai-tasks, campaign.
   - DLQ và retry policy.
 - Chốt object storage:
-  - Local dùng MinIO.
-  - Production dùng Cloudflare R2 hoặc Supabase Storage nếu muốn tránh lưu file trên VPS.
+  - Local/dev dùng Supabase Storage.
+  - Production cũng dùng Supabase Storage để tránh lưu file trên VPS.
 - Handoff cho FE:
-  - Xác nhận file upload sẽ dùng presigned URL, FE không upload binary qua backend API chính.
+  - Xác nhận file upload sẽ dùng signed URL, FE không upload binary qua backend API chính.
 
 Deliverable cuối ngày:
 
@@ -477,18 +477,18 @@ Mục tiêu tuần 3: KB publish được index, ticket/article tìm kiếm đư
   - soft delete.
   - version snapshot khi publish.
 - Tích hợp object storage:
-  - presigned upload URL.
+  - signed upload URL.
   - confirm upload.
   - attachment metadata.
-  - local MinIO.
-  - production provider R2 hoặc Supabase Storage.
+  - Supabase Storage provider.
+  - provider mặc định Supabase Storage; có thể thêm R2/S3 sau nếu cần.
 - Publish outbox events:
   - `knowledge.article.published.v1`.
   - `knowledge.article.unpublished.v1`.
 - Handoff cho FE:
   - Chốt article status enum.
   - Chốt slug, category, publish response.
-  - Chốt flow upload file bằng presigned URL.
+  - Chốt flow upload file bằng signed URL.
 
 Deliverable cuối ngày:
 
@@ -814,8 +814,8 @@ Deliverable cuối ngày:
   - request size limit.
   - caching headers phù hợp cho static/docs nếu có.
 - Production storage:
-  - MinIO nếu self-host.
-  - hoặc Cloudflare R2/Supabase Storage nếu muốn giảm rủi ro disk server.
+  - Supabase Storage private buckets.
+  - Không lưu binary trên VPS; backend chỉ lưu metadata và object key.
 - Database:
   - migration strategy.
   - backup plan.
@@ -1018,7 +1018,7 @@ Các mục dưới đây vẫn thuộc full-scope backlog. Nếu chưa kịp tro
 ### Knowledge/Search Done
 
 - Article publish tạo immutable version.
-- Attachment metadata và presigned upload flow sẵn sàng.
+- Attachment metadata và signed upload flow sẵn sàng.
 - Article/ticket events sync sang Elasticsearch.
 - Tenant filter bắt buộc trong mọi search query.
 - Stale event không overwrite projection mới.
