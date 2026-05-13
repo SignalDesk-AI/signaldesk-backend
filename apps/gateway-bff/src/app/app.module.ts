@@ -7,6 +7,7 @@ import { LoggingModule } from './logging/logging.module';
 import { AuthModule } from './auth/auth.module';
 import { ProxyModule } from './proxy/proxy.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { RequestContextModule } from './request-context/request-context.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     HealthModule,
     LoggingModule,
     AuthModule,
+    RequestContextModule,
     ProxyModule,
     RealtimeModule,
   ],

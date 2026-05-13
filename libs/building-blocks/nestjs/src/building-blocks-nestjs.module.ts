@@ -5,6 +5,7 @@ import { CorrelationModule } from './correlation';
 import { HealthModule } from './health';
 import { LoggingModule } from './logging';
 import { RabbitMqModule } from './rabbitmq';
+import { RedisModule } from './redis';
 import { TenantModule } from './tenant';
 import { TracingModule } from './tracing';
 
@@ -15,6 +16,7 @@ import { TracingModule } from './tracing';
     HealthModule,
     LoggingModule,
     RabbitMqModule,
+    RedisModule,
     TenantModule,
     TracingModule,
   ],
@@ -24,6 +26,7 @@ import { TracingModule } from './tracing';
     HealthModule,
     LoggingModule,
     RabbitMqModule,
+    RedisModule,
     TenantModule,
     TracingModule,
   ],

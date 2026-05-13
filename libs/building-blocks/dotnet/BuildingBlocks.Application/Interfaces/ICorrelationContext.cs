@@ -1,6 +1,5 @@
 namespace BuildingBlocks.Application.Interfaces;
 
-public interface ICorrelationContext
+public interface ICorrelationContext : Context.ICorrelationContext
 {
-    string? CorrelationId { get; }
 }

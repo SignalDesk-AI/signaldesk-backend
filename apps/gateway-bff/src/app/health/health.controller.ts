@@ -1,21 +1,14 @@
-import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import {
   configuredCheck,
   httpCheck,
   readinessPayload,
+  ReadinessResponse,
   tcpCheckFromUrl,
 } from '@signaldesk/building-blocks-nestjs';
+import { Response } from 'express';
 
-const serviceName = 'gateway-bff';
-const downstreamUrls = [
-  ['identity-service', 'IDENTITY_SERVICE_URL', 'http://localhost:5001'],
-  ['workspace-service', 'WORKSPACE_SERVICE_URL', 'http://localhost:5002'],
-  ['support-service', 'SUPPORT_SERVICE_URL', 'http://localhost:5003'],
-  ['knowledge-service', 'KNOWLEDGE_SERVICE_URL', 'http://localhost:5004'],
-  ['notification-service', 'NOTIFICATION_SERVICE_URL', 'http://localhost:3001'],
-  ['search-service', 'SEARCH_SERVICE_URL', 'http://localhost:3002'],
-  ['ai-service', 'AI_SERVICE_URL', 'http://localhost:3003'],
-] as const;
+import { downstreamUrls, serviceName } from './aggregate-health';
 
 @Controller('health')
 export class HealthController {
@@ -29,7 +22,7 @@ export class HealthController {
   }
 
   @Get('ready')
-  async ready() {
+  async ready(@Res({ passthrough: true }) response: Response): Promise<ReadinessResponse> {
     const strictDownstreamChecks =
       process.env.GATEWAY_READY_CHECK_DOWNSTREAMS === 'true';
     const configuredDownstreams = downstreamUrls.map(([service, envName, fallback]) =>
@@ -57,7 +50,7 @@ export class HealthController {
     const payload = readinessPayload(serviceName, dependencies);
 
     if (payload.status !== 'ok') {
-      throw new ServiceUnavailableException(payload);
+      response.status(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     return payload;

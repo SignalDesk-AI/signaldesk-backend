@@ -1,4 +1,4 @@
-import { CORRELATION_ID_HEADER } from '../correlation';
+import { CORRELATION_ID_HEADER, normalizeCorrelationId } from '../correlation';
 
 export const TRACE_ID_HEADER = 'x-trace-id';
 
@@ -8,15 +8,37 @@ export interface TraceContext {
 }
 
 export function extractTraceContext(headers: Record<string, string | string[] | undefined>): TraceContext {
-  const traceId = firstHeaderValue(headers[TRACE_ID_HEADER]);
-  const correlationId = firstHeaderValue(headers[CORRELATION_ID_HEADER]);
+  return resolveTraceContext(headers);
+}
+
+export function resolveTraceContext(
+  headers: Record<string, string | string[] | undefined>,
+  fallbackCorrelationId?: string
+): TraceContext {
+  const traceId = normalizeTraceId(headers[TRACE_ID_HEADER]);
+  const correlationId = normalizeCorrelationId(headers[CORRELATION_ID_HEADER]) ?? fallbackCorrelationId;
 
   return {
-    traceId,
+    traceId: traceId ?? correlationId,
     correlationId,
   };
 }
 
-function firstHeaderValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
+export function applyTraceHeaders(headers: Record<string, string>, context: TraceContext): Record<string, string> {
+  if (context.traceId) {
+    headers[TRACE_ID_HEADER] = context.traceId;
+  }
+
+  if (context.correlationId) {
+    headers[CORRELATION_ID_HEADER] = context.correlationId;
+  }
+
+  return headers;
+}
+
+function normalizeTraceId(value: string | string[] | undefined): string | undefined {
+  const firstValue = Array.isArray(value) ? value[0] : value;
+  const normalized = firstValue?.trim();
+
+  return normalized && normalized.length > 0 ? normalized : undefined;
 }

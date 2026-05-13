@@ -1,4 +1,9 @@
 using System.Net.Sockets;
+using BuildingBlocks.Application.Context;
+using BuildingBlocks.Application.Health;
+using BuildingBlocks.Application.Observability;
+using BuildingBlocks.Infrastructure.Context;
+using BuildingBlocks.Infrastructure.Observability;
 
 const string serviceName = "support-service";
 
@@ -6,6 +11,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
+builder.Services.AddScoped<ICorrelationContext, HttpCorrelationContext>();
+builder.Services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
+builder.Services.AddSingleton<ITraceContextAccessor, SystemDiagnosticsTraceContextAccessor>();
 
 var app = builder.Build();
 
@@ -15,12 +25,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.MapGet("/health/live", () => Results.Ok(new
-{
-    status = "ok",
-    service = serviceName,
-    checkedAt = DateTimeOffset.UtcNow
-}))
+app.MapGet("/health/live", () => Results.Ok(HealthResponse.Live(serviceName)))
 .WithName("LiveHealth")
 .WithOpenApi();
 
@@ -30,15 +35,9 @@ app.MapGet("/health/ready", async () =>
         "pgbouncer",
         GetEnv("PGBOUNCER_HOST", "localhost"),
         GetIntEnv("PGBOUNCER_PORT", 6432));
-    var response = new
-    {
-        status = dependency.Status == "ok" ? "ok" : "degraded",
-        service = serviceName,
-        checkedAt = DateTimeOffset.UtcNow,
-        dependencies = new[] { dependency }
-    };
+    var response = HealthResponse.Ready(serviceName, new[] { dependency });
 
-    return dependency.Status == "ok"
+    return response.Status == "ok"
         ? Results.Ok(response)
         : Results.Json(response, statusCode: StatusCodes.Status503ServiceUnavailable);
 })
@@ -59,7 +58,7 @@ static int GetIntEnv(string name, int fallback)
     return int.TryParse(value, out var parsed) ? parsed : fallback;
 }
 
-static async Task<DependencyCheck> CheckTcpDependencyAsync(
+static async Task<DependencyHealth> CheckTcpDependencyAsync(
     string name,
     string host,
     int port,
@@ -73,7 +72,7 @@ static async Task<DependencyCheck> CheckTcpDependencyAsync(
     {
         await client.ConnectAsync(host, port, cts.Token);
 
-        return new DependencyCheck(
+        return new DependencyHealth(
             name,
             "ok",
             target,
@@ -83,7 +82,7 @@ static async Task<DependencyCheck> CheckTcpDependencyAsync(
     }
     catch (Exception exception)
     {
-        return new DependencyCheck(
+        return new DependencyHealth(
             name,
             "fail",
             target,
@@ -92,11 +91,3 @@ static async Task<DependencyCheck> CheckTcpDependencyAsync(
             exception.Message);
     }
 }
-
-public sealed record DependencyCheck(
-    string Name,
-    string Status,
-    string Target,
-    bool Required,
-    DateTimeOffset CheckedAt,
-    string? Error);

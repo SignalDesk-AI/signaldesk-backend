@@ -11,7 +11,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix, {
-    exclude: [{ path: 'health/(.*)', method: RequestMethod.ALL }],
+    exclude: [
+      { path: 'health/live', method: RequestMethod.GET },
+      { path: 'health/ready', method: RequestMethod.GET },
+    ],
   });
 
   const port = process.env.GATEWAY_BFF_PORT || process.env.PORT || 3000;

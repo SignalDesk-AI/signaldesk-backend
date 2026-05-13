@@ -1,0 +1,27 @@
+namespace BuildingBlocks.Messaging.Outbox;
+
+public sealed record OutboxEvent(
+    Guid Id,
+    string ServiceName,
+    string EventType,
+    int EventVersion,
+    string Exchange,
+    string RoutingKey,
+    Guid? TenantId,
+    string? AggregateType,
+    string? AggregateId,
+    long? AggregateVersion,
+    string? CorrelationId,
+    Guid? CausationId,
+    Guid? ActorId,
+    string Payload,
+    string Headers,
+    OutboxEventStatus Status,
+    int RetryCount,
+    int MaxRetries,
+    DateTimeOffset NextRetryAt,
+    DateTimeOffset? ClaimedAt,
+    string? ClaimedBy,
+    DateTimeOffset? PublishedAt,
+    string? LastError,
+    DateTimeOffset CreatedAt);

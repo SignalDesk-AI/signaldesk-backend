@@ -1,6 +1,5 @@
 namespace BuildingBlocks.Application.Interfaces;
 
-public interface ICurrentUserContext
+public interface ICurrentUserContext : Context.ICurrentUserContext
 {
-    Guid? UserId { get; }
 }

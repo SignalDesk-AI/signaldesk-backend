@@ -1,7 +1,11 @@
+export const APP_LOGGER = Symbol('APP_LOGGER');
+
 export interface LogContext {
   correlationId?: string;
   tenantId?: string;
   serviceName?: string;
+  traceId?: string;
+  [key: string]: unknown;
 }
 
 export interface AppLogger {

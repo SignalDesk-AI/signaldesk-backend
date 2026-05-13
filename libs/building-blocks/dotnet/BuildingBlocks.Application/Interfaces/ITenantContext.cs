@@ -1,6 +1,5 @@
 namespace BuildingBlocks.Application.Interfaces;
 
-public interface ITenantContext
+public interface ITenantContext : Context.ITenantContext
 {
-    Guid? TenantId { get; }
 }
