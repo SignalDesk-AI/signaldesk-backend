@@ -13,6 +13,9 @@ export const publicRouteRules: readonly RouteRule[] = [
   { path: '/api/auth/register', method: RequestMethod.POST },
   { path: '/api/auth/login', method: RequestMethod.POST },
   { path: '/api/auth/refresh', method: RequestMethod.POST },
+  { path: '/api/auth/verify-email', method: RequestMethod.POST },
+  { path: '/api/auth/password-reset/request', method: RequestMethod.POST },
+  { path: '/api/auth/password-reset/confirm', method: RequestMethod.POST },
 ];
 
 export function isPublicRoute(method: string, path: string): boolean {

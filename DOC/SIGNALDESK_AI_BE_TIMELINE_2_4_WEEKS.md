@@ -3,6 +3,9 @@
 > Timeline thực thi riêng cho Backend, tổng hợp từ `SIGNALDESK_AI.md` và `SIGNALDESK_AI_BE_v6_0.md`.
 > FE sẽ chạy song song ở agent khác, nên timeline này ưu tiên API contract, event contract, môi trường deploy và các điểm handoff rõ ràng.
 > File này chỉ nói "làm gì, tích hợp tech stack khi nào", không chứa code mẫu hoặc hướng dẫn implement chi tiết.
+> Agent-coding execution note: mỗi ngày nên được chuyển thành một `docs/handoff/day-N-agent-task-plan.md`
+> theo workflow trong `docs/agent-coding/operating-model.md`. Timeline này giữ vai trò "làm gì";
+> handoff docs giữ vai trò chia agent, tooling mode, write scope, worker prompt và checklist.
 
 ## 1. Cách Đọc Timeline
 

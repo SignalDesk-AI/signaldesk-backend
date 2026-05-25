@@ -1,6 +1,11 @@
-﻿namespace SignalDesk.Identity.Domain;
+using BuildingBlocks.Domain.Exceptions;
 
-public class Class1
+namespace SignalDesk.Identity.Domain;
+
+public sealed class IdentityDomainException : DomainException
 {
-
+    public IdentityDomainException(string message)
+        : base(message)
+    {
+    }
 }

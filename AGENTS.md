@@ -46,6 +46,7 @@ When docs disagree, prefer the current implementation for mechanical details and
 - Do not edit `.env`, secrets, credentials, or local machine-specific config.
 - Do not create branches or worktrees unless the user explicitly requests it.
 - Do not stage, commit, push, or open pull requests unless the user explicitly requests it.
+- Do not install packages or add dependencies unless the user/manager explicitly approves.
 - Do not add Kafka, Kubernetes, Qdrant, or other expansion backlog infrastructure during the core phase unless the current task explicitly asks for it.
 
 ## Coding Rules
@@ -56,13 +57,32 @@ When docs disagree, prefer the current implementation for mechanical details and
 - Prefer small reusable building blocks only when they remove real duplication or match an existing local pattern.
 - Preserve existing health endpoints while improving conventions.
 - Keep gateway proxy code mechanical and route-map driven.
-- Keep Day 3 changes foundational only. Do not implement Day 4 auth business logic, ticket business endpoints, knowledge CRUD, campaign workflows, or AI business behavior.
-- For Day 3 task work, read `docs/handoff/day-3-agent-task-plan.md` and stay inside the task's allowed files/folders.
+- For day-scoped task work, read the current `docs/handoff/day-N-agent-task-plan.md` first and stay inside the task's allowed files/folders.
 - Do not invoke other CLI agents from inside an implementation task unless the user explicitly asks for orchestration.
 - After each task, report:
   - changed files
   - verification commands run
   - remaining risks or follow-up work
+
+## Daily Agent Workflow
+
+SignalDesk backend work is implemented day-by-day from the source-of-truth
+timeline, with Codex acting as the default manager/reviewer and optional worker
+agents used only when the user explicitly asks for orchestration.
+
+Before planning or implementing a day, read:
+
+- `docs/agent-coding/operating-model.md`
+- `docs/agent-coding/tooling-policy.md`
+- `docs/handoff/day-agent-plan-template.md`
+- the previous day's final checklist, if present
+- the current day's task plan, if present
+
+Daily task plans live at `docs/handoff/day-N-agent-task-plan.md`. They must
+define the day goal, allowed scope, forbidden scope, worker ownership, acceptance
+criteria, and verification commands. Workers must edit only their owned scope and
+must not create branches, worktrees, commits, pushes, or pull requests unless the
+user explicitly requests that action.
 
 ## Verification Commands
 
@@ -77,22 +97,9 @@ docker compose -f infra/docker/docker-compose.local.yml config
 
 If a command cannot run because of missing tooling, permissions, local services, or sandbox limits, stop and report the blocker with the exact command that failed.
 
-## Day 3 Guardrails
+## Day Scope Guardrails
 
-Day 3 is for building blocks, observability foundation, and Gateway V1 request pipeline/proxy health. It is not for implementing business services.
-
-Allowed Day 3 themes:
-
-- NestJS shared request context, error envelope, correlation, tenant mismatch helpers, rate-limit abstractions, and structured logging helpers.
-- Gateway request pipeline, auth/JWT verification placeholder, tenant resolution, mismatch rejection, route map proxy skeleton, and health endpoints.
-- .NET shared abstractions for tenant/correlation/current user, unit of work, validation pipeline, outbox, audit, Redis helpers, and health response conventions.
-- Minimal application of health/context conventions to service skeletons.
-- Documentation cleanup and verification notes.
-
-Forbidden Day 3 themes:
-
-- Real identity registration/login/refresh implementation.
-- Ticket, article, notification, search, AI, or campaign business endpoints.
-- Direct RabbitMQ publishing from request handlers.
-- Editing `.env` or secrets.
-- Creating new branches/worktrees without explicit user approval.
+Each day inherits the architecture rules above and the allowed/forbidden scope in
+its task plan. When a timeline item depends on a future day, create only the
+minimum interface, contract, or placeholder needed for the current day and record
+the remaining work in the final checklist.
